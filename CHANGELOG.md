@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.2
+
+- Added explicit per-run Codex model selection with `--model`/`-m`.
+- Added the `CODEXCOMMITS_MODEL` persistent default documentation.
+
 ## 0.2.1
 
 - Avoided unauthenticated GitHub API rate limits in the Windows installer.

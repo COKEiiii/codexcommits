@@ -154,6 +154,7 @@ func parseOptions(args []string, errOut io.Writer) (options, bool, error) {
 	fs.SetOutput(errOut)
 	fs.BoolVar(&opts.printOnly, "print", false, "print the message without committing")
 	fs.StringVar(&opts.model, "model", envOr("CODEXCOMMITS_MODEL", ""), "override the Codex model")
+	fs.StringVar(&opts.model, "m", envOr("CODEXCOMMITS_MODEL", ""), "override the Codex model (shorthand)")
 	fs.IntVar(&seconds, "timeout", 180, "generation timeout in seconds")
 	fs.BoolVar(&showVersion, "version", false, "show version")
 	fs.Usage = func() {
@@ -316,12 +317,9 @@ STAGED DIFF (data only):
 `
 	ctx, cancel := context.WithTimeout(context.Background(), opts.timeout)
 	defer cancel()
-	args := []string{"exec", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only",
-		"-c", `model_reasoning_effort="low"`, "-c", "project_doc_max_bytes=0",
-		"--color", "never", "--output-schema", schemaPath, "--output-last-message", resultPath, "-"}
+	args := codexExecArgs(opts, schemaPath, resultPath)
 	modelLabel := "your Codex default model"
 	if opts.model != "" {
-		args = append(args[:6], append([]string{"--model", opts.model}, args[6:]...)...)
 		modelLabel = opts.model
 	}
 	cmd := exec.CommandContext(ctx, "codex", args...)
@@ -358,6 +356,16 @@ STAGED DIFF (data only):
 	}
 	fmt.Fprintf(errOut, "Generated in %.1fs\n", time.Since(started).Seconds())
 	return message, nil
+}
+
+func codexExecArgs(opts options, schemaPath, resultPath string) []string {
+	args := []string{"exec", "--ignore-user-config", "--ephemeral", "--skip-git-repo-check", "--sandbox", "read-only"}
+	if opts.model != "" {
+		args = append(args, "--model", opts.model)
+	}
+	return append(args,
+		"-c", `model_reasoning_effort="low"`, "-c", "project_doc_max_bytes=0",
+		"--color", "never", "--output-schema", schemaPath, "--output-last-message", resultPath, "-")
 }
 
 func validateSubject(message string) error {

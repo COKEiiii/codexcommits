@@ -215,6 +215,18 @@ func TestOptionsUseCodexDefaultModel(t *testing.T) {
 	}
 }
 
+func TestModelOverrideIsPassedToCodex(t *testing.T) {
+	opts, _, err := parseOptions([]string{"--model", "gpt-5.6-terra"}, &bytes.Buffer{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	args := codexExecArgs(opts, "schema.json", "result.json")
+	joined := strings.Join(args, "\x00")
+	if !strings.Contains(joined, "--model\x00gpt-5.6-terra") {
+		t.Fatalf("model override missing from args: %v", args)
+	}
+}
+
 func TestHelpIsSuccessful(t *testing.T) {
 	var out, errOut bytes.Buffer
 	if err := run([]string{"-h"}, strings.NewReader(""), &out, &errOut); err != nil {
