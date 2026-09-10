@@ -13,6 +13,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	"regexp"
+	"runtime"
 	"strings"
 	"time"
 )
@@ -24,11 +25,30 @@ const maxDiffBytes = 100_000
 var subjectPattern = regexp.MustCompile(`^(feat|fix|refactor|docs|test|chore|perf|build|ci|style|revert)(\([^()\r\n]+\))?!?: .+\S$`)
 var findExecutable = exec.LookPath
 var generateCommitMessage = generate
+var userConfigDir = os.UserConfigDir
 
 type options struct {
 	printOnly bool
 	model     string
+	modelFlag bool
 	timeout   time.Duration
+	choose    bool
+	setModel  bool
+	reset     bool
+}
+
+type modelChoice struct {
+	label string
+	value string
+}
+
+var modelChoices = []modelChoice{
+	{label: "Codex default model", value: ""},
+	{label: "gpt-6-astra", value: "gpt-6-astra"},
+	{label: "gpt-5.6-sol", value: "gpt-5.6-sol"},
+	{label: "gpt-5.6-terra", value: "gpt-5.6-terra"},
+	{label: "gpt-5.6-luna", value: "gpt-5.6-luna"},
+	{label: "gpt-5.5", value: "gpt-5.5"},
 }
 
 type snapshotState struct {
@@ -60,6 +80,59 @@ func run(args []string, in io.Reader, out, errOut io.Writer) error {
 	if showVersion {
 		fmt.Fprintf(out, "codexcommits %s\n", version)
 		return nil
+	}
+	if opts.setModel && (opts.printOnly || opts.choose || opts.reset || opts.modelFlag) {
+		return errors.New("--set-model cannot be combined with --print, --choose-model, --reset-model, or --model")
+	}
+	if opts.reset && (opts.printOnly || opts.choose || opts.modelFlag) {
+		return errors.New("--reset-model cannot be combined with --print, --choose-model, or --model")
+	}
+	if opts.setModel || opts.reset {
+		if in == os.Stdin {
+			info, err := os.Stdin.Stat()
+			if err != nil || info.Mode()&os.ModeCharDevice == 0 {
+				return errors.New("model selection requires a terminal")
+			}
+		}
+		if opts.reset {
+			if err := resetSavedModel(); err != nil {
+				return err
+			}
+			fmt.Fprintln(out, "Model preference cleared. Codex's default model will be used.")
+			return nil
+		}
+		model, err := selectModel(in, out)
+		if err != nil {
+			return err
+		}
+		if err := saveModel(model); err != nil {
+			return err
+		}
+		if model == "" {
+			fmt.Fprintln(out, "Saved Codex default model preference.")
+		} else {
+			fmt.Fprintf(out, "Saved model preference: %s\n", model)
+		}
+		return nil
+	}
+	if opts.choose {
+		if in == os.Stdin {
+			info, err := os.Stdin.Stat()
+			if err != nil || info.Mode()&os.ModeCharDevice == 0 {
+				return errors.New("model selection requires a terminal")
+			}
+		}
+		model, err := selectModel(in, out)
+		if err != nil {
+			return err
+		}
+		opts.model = model
+	} else if opts.model == "" {
+		saved, err := loadSavedModel()
+		if err != nil {
+			return err
+		}
+		opts.model = saved
 	}
 	for _, tool := range []string{"git", "codex"} {
 		if _, err := findExecutable(tool); err != nil {
@@ -155,16 +228,25 @@ func parseOptions(args []string, errOut io.Writer) (options, bool, error) {
 	fs.BoolVar(&opts.printOnly, "print", false, "print the message without committing")
 	fs.StringVar(&opts.model, "model", envOr("CODEXCOMMITS_MODEL", ""), "override the Codex model")
 	fs.StringVar(&opts.model, "m", envOr("CODEXCOMMITS_MODEL", ""), "override the Codex model (shorthand)")
+	fs.BoolVar(&opts.choose, "choose-model", false, "choose a model for this run")
+	fs.BoolVar(&opts.setModel, "set-model", false, "choose and save your default model")
+	fs.BoolVar(&opts.reset, "reset-model", false, "clear the saved model and use Codex's default")
 	fs.IntVar(&seconds, "timeout", 180, "generation timeout in seconds")
 	fs.BoolVar(&showVersion, "version", false, "show version")
 	fs.Usage = func() {
-		fmt.Fprintln(errOut, "Usage: codexcommits [--print] [--model MODEL] [--timeout SECONDS]")
+		fmt.Fprintln(errOut, "Usage: codexcommits [--print] [--choose-model] [--model MODEL] [--timeout SECONDS]")
 		fmt.Fprintln(errOut, "Generate a reviewed Conventional Commit from staged changes with Codex.")
+		fmt.Fprintln(errOut, "Use --set-model once to save a model choice, or --reset-model to restore Codex's default.")
 		fs.PrintDefaults()
 	}
 	if err := fs.Parse(args); err != nil {
 		return opts, false, err
 	}
+	fs.Visit(func(item *flag.Flag) {
+		if item.Name == "model" || item.Name == "m" {
+			opts.modelFlag = true
+		}
+	})
 	if fs.NArg() != 0 {
 		return opts, false, errors.New("unexpected positional arguments")
 	}
@@ -173,6 +255,80 @@ func parseOptions(args []string, errOut io.Writer) (options, bool, error) {
 	}
 	opts.timeout = time.Duration(seconds) * time.Second
 	return opts, showVersion, nil
+}
+
+func selectModel(in io.Reader, out io.Writer) (string, error) {
+	reader := bufio.NewReader(in)
+	for {
+		fmt.Fprintln(out, "Choose a Codex model:")
+		for index, choice := range modelChoices {
+			fmt.Fprintf(out, "  %d) %s\n", index+1, choice.label)
+		}
+		choice, err := readLine(reader, out, "Selection [1]: ")
+		if err != nil && !errors.Is(err, io.EOF) {
+			return "", err
+		}
+		choice = strings.TrimSpace(choice)
+		if choice == "" {
+			return modelChoices[0].value, nil
+		}
+		var index int
+		if _, scanErr := fmt.Sscanf(choice, "%d", &index); scanErr == nil && index >= 1 && index <= len(modelChoices) {
+			return modelChoices[index-1].value, nil
+		}
+		fmt.Fprintln(out, "Please choose one of the listed numbers.")
+	}
+}
+
+func modelConfigPath() (string, error) {
+	configDir, err := userConfigDir()
+	if err != nil {
+		return "", err
+	}
+	if runtime.GOOS == "windows" && os.Getenv("APPDATA") != "" {
+		configDir = os.Getenv("APPDATA")
+	}
+	return filepath.Join(configDir, "codexcommits", "model"), nil
+}
+
+func loadSavedModel() (string, error) {
+	path, err := modelConfigPath()
+	if err != nil {
+		return "", err
+	}
+	raw, err := os.ReadFile(path)
+	if errors.Is(err, os.ErrNotExist) {
+		return "", nil
+	}
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(raw)), nil
+}
+
+func saveModel(model string) error {
+	path, err := modelConfigPath()
+	if err != nil {
+		return err
+	}
+	if model == "" {
+		return resetSavedModel()
+	}
+	if err := os.MkdirAll(filepath.Dir(path), 0o700); err != nil {
+		return err
+	}
+	return os.WriteFile(path, []byte(model+"\n"), 0o600)
+}
+
+func resetSavedModel() error {
+	path, err := modelConfigPath()
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(path); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return err
+	}
+	return nil
 }
 
 func envOr(name, fallback string) string {

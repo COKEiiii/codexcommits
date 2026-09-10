@@ -227,6 +227,33 @@ func TestModelOverrideIsPassedToCodex(t *testing.T) {
 	}
 }
 
+func TestSelectModelUsesMenuNumber(t *testing.T) {
+	var out bytes.Buffer
+	model, err := selectModel(strings.NewReader("4\n"), &out)
+	if err != nil || model != "gpt-5.6-terra" {
+		t.Fatalf("model=%q err=%v output=%s", model, err, out.String())
+	}
+}
+
+func TestSavedModelCanBeSelectedAndCleared(t *testing.T) {
+	oldConfigDir := userConfigDir
+	dir := t.TempDir()
+	userConfigDir = func() (string, error) { return dir, nil }
+	t.Cleanup(func() { userConfigDir = oldConfigDir })
+	if err := saveModel("gpt-5.6-terra"); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := loadSavedModel(); err != nil || got != "gpt-5.6-terra" {
+		t.Fatalf("saved model=%q err=%v", got, err)
+	}
+	if err := resetSavedModel(); err != nil {
+		t.Fatal(err)
+	}
+	if got, err := loadSavedModel(); err != nil || got != "" {
+		t.Fatalf("cleared model=%q err=%v", got, err)
+	}
+}
+
 func TestHelpIsSuccessful(t *testing.T) {
 	var out, errOut bytes.Buffer
 	if err := run([]string{"-h"}, strings.NewReader(""), &out, &errOut); err != nil {

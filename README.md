@@ -86,15 +86,27 @@ By default, the tool uses the model selected by your Codex CLI with low
 reasoning. Most users do not need to change anything. Run
 `codexcommits --help` to see the optional advanced flags.
 
-Choose a model for one run when you want to compare models:
+Choose a model from a numbered menu for one run:
 
 ```bash
-codexcommits --model gpt-5.6-terra
+codexcommits --choose-model
 ```
 
-The value is passed directly to Codex CLI, so it can be any model your Codex
-account and installed CLI support. Use `CODEXCOMMITS_MODEL` if you want a
-persistent personal default; remove the variable to return to Codex's default.
+Choose and save a default model from the same menu:
+
+```bash
+codexcommits --set-model
+```
+
+Later, regular `codexcommits` runs use that saved choice. Restore Codex CLI's
+default model at any time:
+
+```bash
+codexcommits --reset-model
+```
+
+Advanced users can still pass a model directly with `--model MODEL` or `-m MODEL`.
+The selected value is passed to Codex CLI as-is.
 
 ## What happens behind the command
 

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0
+
+- Added a numbered model menu for one-time selection with `--choose-model`.
+- Added saved model preferences with `--set-model` and `--reset-model`.
+- Kept direct `--model`/`-m` overrides for advanced users.
+
 ## 0.2.2
 
 - Added explicit per-run Codex model selection with `--model`/`-m`.

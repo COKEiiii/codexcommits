@@ -78,15 +78,27 @@ codexcommits --print
 默认使用 Codex CLI 为你的账户选择的模型，并采用 low 推理强度。大多数用户
 不需要修改任何配置。可选高级参数可以通过 `codexcommits --help` 查看。
 
-如果想在某一次提交中自主选择模型，可以直接指定：
+如果想在某一次提交中自主选择模型，运行菜单：
 
 ```bash
-codexcommits --model gpt-5.6-terra
+codexcommits --choose-model
 ```
 
-模型名称会原样传给 Codex CLI，因此可以填写当前账户和 CLI 版本支持的任意
-模型。想固定自己的默认模型，可以设置 `CODEXCOMMITS_MODEL`；删除这个环境
-变量即可恢复为 Codex CLI 默认模型。
+然后输入菜单编号即可，不需要自己输入模型名称。
+
+想选择并保存默认模型：
+
+```bash
+codexcommits --set-model
+```
+
+以后直接运行 `codexcommits` 就会使用这个选择。恢复 Codex CLI 默认模型：
+
+```bash
+codexcommits --reset-model
+```
+
+熟悉命令行的用户仍可以使用 `--model MODEL` 或 `-m MODEL` 直接指定模型。
 
 ## 这个命令做了什么
 
