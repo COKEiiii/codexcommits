@@ -1,12 +1,14 @@
 # codexcommits
 
 [![CI](https://github.com/COKEiiii/codexcommits/actions/workflows/ci.yml/badge.svg)](https://github.com/COKEiiii/codexcommits/actions/workflows/ci.yml)
-[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![Release](https://img.shields.io/github/v/release/COKEiiii/codexcommits)](https://github.com/COKEiiii/codexcommits/releases/latest)
 [![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
-Generate an accurate Conventional Commit from your staged snapshot using the
-Codex CLI and the ChatGPT account you already use. Review, edit, regenerate, or
-cancel before Git creates the commit.
+The beginner-friendly commit command for people who already use Codex.
+
+Stage your changes, run one command, and review the generated Conventional
+Commit before Git creates it. There are no API keys, provider settings, prompt
+files, or language runtimes to configure.
 
 ```console
 $ git add src/parser.py
@@ -21,115 +23,111 @@ feat(parser): handle nested markdown tables
 
 [简体中文](README.zh-CN.md)
 
-## Why this project?
+## What you need
 
-AI commit generators already exist. This project deliberately has a narrower
-contract for people who use Codex through a ChatGPT subscription:
-
-- requires `codex login` with ChatGPT and refuses silent API-key fallback;
-- sends only an immutable staged-tree diff, never unstaged working-tree edits;
-- never stages or pushes;
-- invalidates the result if HEAD or the staged tree changes while generating;
-- uses ephemeral, read-only `codex exec` with low reasoning;
-- requires schema-valid, single-line Conventional Commit output;
-- preserves normal Git hooks, signing, and configuration;
-- uses only the Python standard library at runtime.
-
-See [MARKET_RESEARCH.md](MARKET_RESEARCH.md) for similar projects and the
-honest scope comparison.
-
-## Requirements
-
-- macOS or Linux
-- Python 3.10+
 - Git
-- Codex CLI 0.149.0+ on `PATH`
-- a working ChatGPT login: `codex login status`
+- the [Codex CLI](https://developers.openai.com/codex/cli/) on `PATH`
+- an existing ChatGPT login in Codex: `codex login status`
 
-Install Codex and sign in with ChatGPT by following the
-[official authentication guide](https://learn.chatgpt.com/docs/auth).
+`codexcommits` is a single executable. It does not require Python, Node.js, an
+OpenAI API key, or a separate model account.
 
 ## Install
 
-The easiest isolated installation uses `pipx`:
+### macOS, Linux, and WSL2
 
 ```bash
-pipx install git+https://github.com/COKEiiii/codexcommits.git
+brew install COKEiiii/tap/codexcommits
 ```
 
-Or install from a clone:
+Upgrade later with:
 
 ```bash
-git clone https://github.com/COKEiiii/codexcommits.git
-cd codexcommits
-python3 -m pip install .
+brew upgrade codexcommits
 ```
 
-## Usage
+### Windows PowerShell
 
-Stage exactly what you want to commit, then run the tool:
+```powershell
+irm https://raw.githubusercontent.com/COKEiiii/codexcommits/main/install.ps1 | iex
+```
+
+This installs the latest Windows executable in your user profile and adds it
+to your user `PATH`. You can inspect [install.ps1](install.ps1) before running
+it. Manual downloads for macOS, Linux, and Windows are also available on the
+[Releases page](https://github.com/COKEiiii/codexcommits/releases/latest).
+
+## Use it
 
 ```bash
 git add path/to/file
 codexcommits
 ```
 
-`git diff --cached` is optional and useful for your own review.
-`codexcommits` reads the staged snapshot itself.
+`git diff --cached` is optional. It is useful when you want to inspect the
+staged diff yourself; `codexcommits` reads the staged snapshot automatically.
 
 At the prompt:
 
-- `y` commits with the displayed message;
-- `e` lets you replace the complete subject and asks again;
-- `r` calls Codex again and consumes additional allowance;
-- `n`, Enter, or Ctrl-C cancels while preserving the index.
+| Key | Action |
+|---|---|
+| `y` | create the commit with the displayed message |
+| `e` | replace the complete message, then review it again |
+| `r` | ask Codex for another suggestion; this uses more allowance |
+| `n`, Enter, or Ctrl-C | cancel and preserve the staged changes |
 
-Generate without committing:
+Generate a message without committing:
 
 ```bash
 codexcommits --print
 ```
 
-Use another available Codex model for one run:
+By default, the tool uses the model selected by your Codex CLI with low
+reasoning. Most users do not need to change anything. Run
+`codexcommits --help` to see the optional advanced flags.
 
-```bash
-codexcommits --model gpt-5.6-terra
-```
+## What happens behind the command
 
-The default is `gpt-5.6-luna` with low reasoning. You can set a persistent
-shell-level default with `CODEXCOMMITS_MODEL`.
+1. The tool checks that you are inside a Git repository with staged changes.
+2. It captures the exact staged Git tree and sends only its textual diff to
+   Codex.
+3. Codex returns one schema-validated Conventional Commit subject.
+4. The tool shows the suggestion and waits for your choice.
+5. If you accept, it verifies that HEAD and the staged tree are unchanged and
+   runs a normal `git commit`.
 
-## Data and usage
+The tool never runs `git add` or `git push`. Normal Git hooks, signing, and
+configuration still apply.
+
+## Privacy and Codex usage
 
 The staged textual diff is sent through Codex to OpenAI under the policies of
-the ChatGPT account used by Codex. Binary contents are not included in Git's
-text diff. A request is rejected before Codex runs when the diff exceeds 100 KB.
+the ChatGPT account already used by Codex. Do not stage secrets. Binary contents
+are not included in Git's textual diff, and diffs larger than 100 KB are rejected
+before Codex runs.
 
-Each generation consumes Codex allowance. Consumption varies with the model,
-input size, reasoning, and other runtime factors. See the
-[official Codex pricing and usage documentation](https://learn.chatgpt.com/docs/pricing).
-
+Each generation uses Codex allowance. Choosing `r` makes another request.
 `codexcommits` removes API-key environment variables from the Codex child
-process and verifies that `codex login status` reports ChatGPT. It does not read
-or store credentials.
+process and verifies that the active login reports ChatGPT. It does not read or
+store your credentials.
+
+## Similar projects
+
+The general idea already exists. This project focuses on a small, predictable
+workflow for Codex beginners: explicit staging, ChatGPT authentication, staged
+snapshot checks, review before commit, and no provider configuration. See
+[MARKET_RESEARCH.md](MARKET_RESEARCH.md) for the comparison.
 
 ## Development
 
 ```bash
-python3 -m pip install -e .
-python3 -m unittest discover -s tests -v
+go test ./...
+go vet ./...
+go build .
 ```
 
-The tests use temporary Git repositories and a mocked generation boundary; CI
-does not need Codex credentials. A maintainer can run a manual end-to-end check
-with `codexcommits --print` in a repository containing staged changes.
-
-## Limitations
-
-- Generated text can still be inaccurate; review it before accepting.
-- Only one-line Conventional Commit subjects are supported in v0.1.
-- Diffs larger than 100 KB must be split into smaller commits.
-- Windows support has not been tested.
+Tests use temporary Git repositories and a mocked generation boundary, so CI
+does not need Codex credentials.
 
 ## License
 

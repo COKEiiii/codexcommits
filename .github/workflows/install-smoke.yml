@@ -1,0 +1,18 @@
+name: Installation smoke test
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  windows-installer:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install latest release
+        shell: pwsh
+        run: |
+          Get-Content ./install.ps1 -Raw | Invoke-Expression
+          & "$env:LOCALAPPDATA\Programs\codexcommits\codexcommits.exe" --version
