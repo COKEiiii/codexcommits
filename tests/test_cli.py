@@ -38,6 +38,7 @@ class CommitWorkflow(unittest.TestCase):
     def run_flow(self, choices, generated='fix: update the value', effect=None):
         with patch.object(sys, 'argv', ['codexcommits']), patch.object(sys, 'stdin', Mock(isatty=lambda: True)), \
              patch('builtins.input', side_effect=choices), patch.object(cc, 'generate', return_value=generated, side_effect=effect) as model, \
+             patch.object(cc.shutil, 'which', return_value='/mock/tool'), \
              contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
             result = cc.main()
             return result, model
