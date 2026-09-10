@@ -1,5 +1,9 @@
 # codexcommits
 
+[![CI](https://github.com/COKEiiii/codexcommits/actions/workflows/ci.yml/badge.svg)](https://github.com/COKEiiii/codexcommits/actions/workflows/ci.yml)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue.svg)](https://www.python.org/)
+[![MIT License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+
 Generate an accurate Conventional Commit from your staged snapshot using the
 Codex CLI and the ChatGPT account you already use. Review, edit, regenerate, or
 cancel before Git creates the commit.
