@@ -1,0 +1,20 @@
+name: Feature request
+description: Suggest a focused improvement for Codex beginners
+title: "feat: "
+labels:
+  - enhancement
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would this solve?
+      description: Describe the workflow or user problem before proposing a solution.
+    validations:
+      required: true
+  - type: textarea
+    id: idea
+    attributes:
+      label: What would you like to happen?
+      description: Share the simplest behavior that would help.
+    validations:
+      required: true

@@ -1,0 +1,33 @@
+name: Bug report
+description: Report a reproducible problem with codexcommits
+title: "bug: "
+labels:
+  - bug
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for helping improve codexcommits. Please remove secrets and private source code from the report.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Tell us what you expected and what you saw.
+      placeholder: The command printed... but I expected...
+    validations:
+      required: true
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Include codexcommits --version, codex --version, OS, and architecture.
+      placeholder: codexcommits 0.3.0, Codex ..., macOS arm64
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest safe command sequence that reproduces it.
+    validations:
+      required: true

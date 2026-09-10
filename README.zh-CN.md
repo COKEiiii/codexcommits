@@ -19,6 +19,17 @@ feat(parser): handle nested markdown tables
 
 [English](README.md)
 
+**使用你已有的 Codex 登录生成 Conventional Commit。不需要 API Key，也不需要
+配置模型提供商。**
+
+![codexcommits 终端演示](assets/demo.gif)
+
+**macOS、Linux 或 WSL2 一行安装：**
+
+```bash
+brew install COKEiiii/tap/codexcommits
+```
+
 ## 使用前提
 
 - 已安装 Git；
@@ -122,6 +133,13 @@ codexcommits --reset-model
 进程中的 API Key 环境变量，并确认当前登录状态包含 ChatGPT；它不会读取或
 保存登录凭据。
 
+## 反馈
+
+如果遇到问题或有适合 Codex 新手的改进建议，请提交
+[Issue](https://github.com/COKEiiii/codexcommits/issues/new/choose)，并附上
+操作系统、架构、`codexcommits --version` 和 `codex --version`。提交前请删除
+密钥和私有源码。
+
 ## 与同类项目的关系
 
 使用 AI 或 Codex 生成 commit message 的想法已经存在。本项目专注于让 Codex
@@ -135,6 +153,13 @@ codexcommits --reset-model
 go test ./...
 go vet ./...
 go build .
+```
+
+README 中的演示 GIF 可以使用 Pillow 重新生成：
+
+```bash
+python3 -m pip install Pillow
+python3 scripts/make-demo-gif.py
 ```
 
 MIT License

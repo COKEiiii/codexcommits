@@ -23,6 +23,17 @@ feat(parser): handle nested markdown tables
 
 [简体中文](README.zh-CN.md)
 
+**AI-generated Conventional Commits using your existing Codex login. No API
+keys. No provider setup.**
+
+![codexcommits terminal demo](assets/demo.gif)
+
+**Install on macOS, Linux, or WSL2:**
+
+```bash
+brew install COKEiiii/tap/codexcommits
+```
+
 ## What you need
 
 - Git
@@ -133,6 +144,13 @@ Each generation uses Codex allowance. Choosing `r` makes another request.
 process and verifies that the active login reports ChatGPT. It does not read or
 store your credentials.
 
+## Feedback
+
+Found a bug or have an idea that would help Codex beginners? Please open an
+[issue](https://github.com/COKEiiii/codexcommits/issues/new/choose) with your
+OS, architecture, `codexcommits --version`, and `codex --version`. Remove
+secrets and private source code before posting.
+
 ## Similar projects
 
 The general idea already exists. This project focuses on a small, predictable
@@ -150,6 +168,13 @@ go build .
 
 Tests use temporary Git repositories and a mocked generation boundary, so CI
 does not need Codex credentials.
+
+The README demo can be regenerated with Pillow:
+
+```bash
+python3 -m pip install Pillow
+python3 scripts/make-demo-gif.py
+```
 
 ## License
 
