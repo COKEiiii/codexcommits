@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.1
+
+- Avoided unauthenticated GitHub API rate limits in the Windows installer.
+
 ## 0.2.0
 
 - Replaced the Python package with standalone macOS, Linux, and Windows binaries.
