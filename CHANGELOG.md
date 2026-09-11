@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.4.0
+## 0.3.1
 
 - Added explicit `--push` mode to run `git add .`, review and create the commit,
   then run `git push` after confirmation.
