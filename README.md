@@ -87,6 +87,17 @@ At the prompt:
 | `r` | ask Codex for another suggestion; this uses more allowance |
 | `n`, Enter, or Ctrl-C | cancel and preserve the staged changes |
 
+For a practice project where you want to stage everything and sync the accepted
+commit immediately, use the explicit push mode:
+
+```bash
+codexcommits --push
+```
+
+This runs `git add .`, generates the message, waits for the same review prompt,
+and only after you choose `y` runs `git push`. If the push fails, the commit is
+kept locally so you can inspect the Git output and retry `git push` yourself.
+
 Generate a message without committing:
 
 ```bash
@@ -128,9 +139,12 @@ The selected value is passed to Codex CLI as-is.
 4. The tool shows the suggestion and waits for your choice.
 5. If you accept, it verifies that HEAD and the staged tree are unchanged and
    runs a normal `git commit`.
+6. With `--push`, it first stages the current directory with `git add .` and
+   runs `git push` after the accepted commit.
 
-The tool never runs `git add` or `git push`. Normal Git hooks, signing, and
-configuration still apply.
+The default command never runs `git add` or `git push`; those actions are only
+enabled explicitly with `--push`. Normal Git hooks, signing, and configuration
+still apply.
 
 ## Privacy and Codex usage
 

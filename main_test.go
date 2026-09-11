@@ -50,7 +50,7 @@ func writeFile(t *testing.T, path, content string, mode os.FileMode) {
 	}
 }
 
-func withRepo(t *testing.T, repo string, input string, generator func([]byte, options, ioWriter) (string, error)) (string, string, error) {
+func withRepo(t *testing.T, repo string, input string, generator func([]byte, options, ioWriter) (string, error), args ...string) (string, string, error) {
 	t.Helper()
 	oldDir, _ := os.Getwd()
 	if err := os.Chdir(repo); err != nil {
@@ -64,7 +64,7 @@ func withRepo(t *testing.T, repo string, input string, generator func([]byte, op
 	}
 	t.Cleanup(func() { findExecutable, generateCommitMessage = oldFind, oldGenerate })
 	var stdout, stderr bytes.Buffer
-	err := run(nil, strings.NewReader(input), &stdout, &stderr)
+	err := run(args, strings.NewReader(input), &stdout, &stderr)
 	return stdout.String(), stderr.String(), err
 }
 
@@ -183,6 +183,36 @@ func TestGenerationFailureDoesNotCommit(t *testing.T) {
 	}
 }
 
+func TestPushModeStagesAllCommitsAndPushes(t *testing.T) {
+	repo := newTestRepo(t)
+	remote := filepath.Join(t.TempDir(), "remote.git")
+	runGit(t, filepath.Dir(remote), "init", "--bare", "-q", remote)
+	runGit(t, repo.path, "remote", "add", "origin", remote)
+	branch := runGit(t, repo.path, "branch", "--show-current")
+	runGit(t, repo.path, "push", "-q", "-u", "origin", branch)
+
+	writeFile(t, filepath.Join(repo.path, "unstaged.txt"), "staged by push mode\n", 0o644)
+	var received []byte
+	stdout, stderr, err := withRepo(t, repo.path, "y\n", func(diff []byte, _ options, _ ioWriter) (string, error) {
+		received = append([]byte(nil), diff...)
+		return "feat: add unstaged file", nil
+	}, "--push")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !bytes.Contains(received, []byte("unstaged.txt")) {
+		t.Fatalf("git add . did not stage the new file:\n%s", received)
+	}
+	if !strings.Contains(stderr, "git add .") || !strings.Contains(stdout, "Committed and pushed.") {
+		t.Fatalf("unexpected output; stdout=%q stderr=%q", stdout, stderr)
+	}
+	localHead := runGit(t, repo.path, "rev-parse", "HEAD")
+	remoteHead := runGit(t, remote, "rev-parse", branch)
+	if localHead != remoteHead {
+		t.Fatalf("remote head %s does not match local head %s", remoteHead, localHead)
+	}
+}
+
 func TestValidateSubject(t *testing.T) {
 	for _, good := range []string{"feat: add parser", "fix(api): handle empty input", "feat!: remove old API"} {
 		if err := validateSubject(good); err != nil {
@@ -212,6 +242,17 @@ func TestOptionsUseCodexDefaultModel(t *testing.T) {
 	opts, _, err := parseOptions(nil, &bytes.Buffer{})
 	if err != nil || opts.model != "" || opts.timeout != 180*time.Second {
 		t.Fatalf("opts=%+v err=%v", opts, err)
+	}
+}
+
+func TestPushOptionIsParsedAndPrintRejectsIt(t *testing.T) {
+	opts, _, err := parseOptions([]string{"--push"}, &bytes.Buffer{})
+	if err != nil || !opts.push {
+		t.Fatalf("opts=%+v err=%v", opts, err)
+	}
+	var out, errOut bytes.Buffer
+	if err := run([]string{"--push", "--print"}, strings.NewReader(""), &out, &errOut); err == nil || !strings.Contains(err.Error(), "--print cannot be combined with --push") {
+		t.Fatalf("unexpected error: %v", err)
 	}
 }
 

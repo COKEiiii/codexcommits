@@ -80,6 +80,17 @@ codexcommits
 | `r` | 让 Codex 重新生成一次，会再次使用额度 |
 | `n`、直接回车或 Ctrl-C | 取消，暂存内容保持不变 |
 
+如果是练习项目，想用一条命令完成“暂存全部改动、生成说明、确认提交并推送”，
+可以显式使用 push 模式：
+
+```bash
+codexcommits --push
+```
+
+它会先执行 `git add .`，然后生成说明并显示同样的确认提示；只有输入 `y` 后才会
+创建 commit 并运行 `git push`。如果 push 失败，本地 commit 会保留，你可以查看
+Git 输出后再单独执行 `git push`。
+
 只生成说明，不创建 commit：
 
 ```bash
@@ -119,9 +130,11 @@ codexcommits --reset-model
 4. 把建议显示给你，等待确认、编辑、重试或取消；
 5. 确认提交前再次检查 HEAD 和暂存树没有变化，然后运行普通的
    `git commit`。
+6. 使用 `--push` 时，先对当前目录执行 `git add .`，commit 成功后再运行
+   `git push`。
 
-工具不会执行 `git add` 或 `git push`。你原有的 Git hooks、签名和配置仍然
-生效。
+默认的 `codexcommits` 不会执行 `git add` 或 `git push`；只有显式使用
+`--push` 才会启用这两个动作。你原有的 Git hooks、签名和配置仍然生效。
 
 ## 隐私和额度
 

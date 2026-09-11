@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.4.0
+
+- Added explicit `--push` mode to run `git add .`, review and create the commit,
+  then run `git push` after confirmation.
+
 ## 0.3.0
 
 - Added a numbered model menu for one-time selection with `--choose-model`.

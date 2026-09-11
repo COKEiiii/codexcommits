@@ -29,6 +29,7 @@ var userConfigDir = os.UserConfigDir
 
 type options struct {
 	printOnly bool
+	push      bool
 	model     string
 	modelFlag bool
 	timeout   time.Duration
@@ -81,11 +82,14 @@ func run(args []string, in io.Reader, out, errOut io.Writer) error {
 		fmt.Fprintf(out, "codexcommits %s\n", version)
 		return nil
 	}
-	if opts.setModel && (opts.printOnly || opts.choose || opts.reset || opts.modelFlag) {
-		return errors.New("--set-model cannot be combined with --print, --choose-model, --reset-model, or --model")
+	if opts.setModel && (opts.printOnly || opts.push || opts.choose || opts.reset || opts.modelFlag) {
+		return errors.New("--set-model cannot be combined with --print, --push, --choose-model, --reset-model, or --model")
 	}
-	if opts.reset && (opts.printOnly || opts.choose || opts.modelFlag) {
-		return errors.New("--reset-model cannot be combined with --print, --choose-model, or --model")
+	if opts.reset && (opts.printOnly || opts.push || opts.choose || opts.modelFlag) {
+		return errors.New("--reset-model cannot be combined with --print, --push, --choose-model, or --model")
+	}
+	if opts.printOnly && opts.push {
+		return errors.New("--print cannot be combined with --push")
 	}
 	if opts.setModel || opts.reset {
 		if in == os.Stdin {
@@ -154,6 +158,12 @@ func run(args []string, in io.Reader, out, errOut io.Writer) error {
 		return errors.New("not inside a Git repository")
 	}
 	repo := strings.TrimSpace(string(repoRaw))
+	if opts.push {
+		fmt.Fprintln(errOut, "Running git add . before generating the commit message...")
+		if _, err := git(cwd, "add", "."); err != nil {
+			return fmt.Errorf("git add . failed: %w", err)
+		}
+	}
 	snap, err := takeSnapshot(repo)
 	if err != nil {
 		return err
@@ -173,7 +183,11 @@ func run(args []string, in io.Reader, out, errOut io.Writer) error {
 			return nil
 		}
 		fmt.Fprintf(out, "\n%s\n\n", message)
-		choice, err := readLine(reader, out, "[y] commit  [e] edit  [r] regenerate  [n/Enter] cancel: ")
+		prompt := "[y] commit  [e] edit  [r] regenerate  [n/Enter] cancel: "
+		if opts.push {
+			prompt = "[y] commit and push  [e] edit  [r] regenerate  [n/Enter] cancel: "
+		}
+		choice, err := readLine(reader, out, prompt)
 		if err != nil && !errors.Is(err, io.EOF) {
 			return err
 		}
@@ -211,6 +225,16 @@ func run(args []string, in io.Reader, out, errOut io.Writer) error {
 			if err := cmd.Run(); err != nil {
 				return errors.New("git commit failed; review the Git or hook output above")
 			}
+			if opts.push {
+				fmt.Fprintln(out, "Commit created. Pushing to the configured Git remote...")
+				pushCmd := exec.Command("git", "-C", repo, "push")
+				pushCmd.Stdout, pushCmd.Stderr = out, errOut
+				if err := pushCmd.Run(); err != nil {
+					return errors.New("git push failed; the commit was created locally, review the Git output above")
+				}
+				fmt.Fprintln(out, "Committed and pushed.")
+				return nil
+			}
 			fmt.Fprintln(out, "Committed. Run git push when you want to sync the remote.")
 			return nil
 		default:
@@ -226,6 +250,7 @@ func parseOptions(args []string, errOut io.Writer) (options, bool, error) {
 	fs := flag.NewFlagSet("codexcommits", flag.ContinueOnError)
 	fs.SetOutput(errOut)
 	fs.BoolVar(&opts.printOnly, "print", false, "print the message without committing")
+	fs.BoolVar(&opts.push, "push", false, "stage with git add ., commit after review, then run git push")
 	fs.StringVar(&opts.model, "model", envOr("CODEXCOMMITS_MODEL", ""), "override the Codex model")
 	fs.StringVar(&opts.model, "m", envOr("CODEXCOMMITS_MODEL", ""), "override the Codex model (shorthand)")
 	fs.BoolVar(&opts.choose, "choose-model", false, "choose a model for this run")
@@ -234,7 +259,7 @@ func parseOptions(args []string, errOut io.Writer) (options, bool, error) {
 	fs.IntVar(&seconds, "timeout", 180, "generation timeout in seconds")
 	fs.BoolVar(&showVersion, "version", false, "show version")
 	fs.Usage = func() {
-		fmt.Fprintln(errOut, "Usage: codexcommits [--print] [--choose-model] [--model MODEL] [--timeout SECONDS]")
+		fmt.Fprintln(errOut, "Usage: codexcommits [--push] [--print] [--choose-model] [--model MODEL] [--timeout SECONDS]")
 		fmt.Fprintln(errOut, "Generate a reviewed Conventional Commit from staged changes with Codex.")
 		fmt.Fprintln(errOut, "Use --set-model once to save a model choice, or --reset-model to restore Codex's default.")
 		fs.PrintDefaults()

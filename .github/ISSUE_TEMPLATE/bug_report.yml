@@ -21,7 +21,7 @@ body:
     attributes:
       label: Versions
       description: Include codexcommits --version, codex --version, OS, and architecture.
-      placeholder: codexcommits 0.3.0, Codex ..., macOS arm64
+      placeholder: codexcommits 0.4.0, Codex ..., macOS arm64
     validations:
       required: true
   - type: textarea
